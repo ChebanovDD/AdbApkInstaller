@@ -1,5 +1,4 @@
 # AdbApkInstaller
-# APK Deploy Tool (ADB Auto Installer)
 
 ---
 
