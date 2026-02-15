@@ -21,17 +21,22 @@ class C:
 def log_step(msg):
     print(f"{C.CYAN}[STEP]{C.RESET} {msg}")
 
+
 def log_apk(msg):
     print(f"{C.MAGENTA}[APK]{C.RESET} {msg}")
+
 
 def log_command(msg):
     print(f"{C.BLUE}[COMMAND]{C.RESET} {msg}")
 
+
 def log_warn(msg):
     print(f"{C.YELLOW}[WARN]{C.RESET} {msg}")
 
+
 def log_error(msg):
     print(f"{C.RED}[ERROR]{C.RESET} {msg}")
+
 
 def log_success(msg):
     print(f"{C.GREEN}[OK]{C.RESET} {msg}")
@@ -115,6 +120,7 @@ def install_apk(apk_path, flags):
     success = run(f'install {flags} "{apk_path}"')
     return success
 
+
 def apply_appops(package, ops):
     for op in ops:
         log_step(f"Executing: {op}")
@@ -161,24 +167,53 @@ def enable_accessibility_services(new_services):
     run("shell settings put secure accessibility_enabled 1")
 
 
-# ==============================
-# Main
-# ==============================
-def main():
-    if not APK_DIR.exists():
-        log_error("apk folder not found. Create ./apk and put APK files there.")
-        return
+def draw_progress(current, total, bar_length=40):
+    percent = current / total
+    filled = int(bar_length * percent)
+    bar = "█" * filled + "-" * (bar_length - filled)
+    sys.stdout.write(f"\r{C.BOLD}Progress:{C.RESET} |{C.GREEN}{bar}{C.RESET}| {current}/{total} ({int(percent*100)}%)")
+    sys.stdout.flush()
 
-    if not PERMISSIONS_FILE.exists():
-        log_error("permissions.json not found.")
-        return
 
-    check_adb()
-    select_device()
+def select_mode():
+    print()
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print(f"{C.BOLD}Select mode{C.RESET}")
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print()
+    print(f"[1] Install (install APKs + apply permissions)")
+    print(f"[2] Apply permissions only (skip APK installation)")
+    print(f"[3] Exit")
+    
+    choice = input(f"\n{C.CYAN}Enter your choice (1 or 2): {C.RESET}")
+    
+    if choice == "1":
+        return "install"
+    elif choice == "2":
+        return "apply_permissions"
+    elif choice == "3":
+        sys.exit(0)
+    else:
+        log_error("Invalid choice. Please enter 1, 2, or 3.")
+        sys.exit(1)
 
-    with open(PERMISSIONS_FILE, "r", encoding="utf-8") as f:
-        permissions_map = json.load(f)
 
+def apply_permissions_to_package(package, config):
+    apply_appops(package, config.get("appops", []))
+    apply_pm_grants(package, config.get("pm_grants", []))
+    
+    if config.get("deviceidle_whitelist", False):
+        log_step("Adding to deviceidle whitelist")
+        add_deviceidle_whitelist(package)
+    
+    acc = config.get("accessibility_services", [])
+    if acc:
+        log_step("Adding accessibility service")
+        enable_accessibility_services(acc)
+
+
+def mode_install(permissions_map):
+    """Mode 1: Install APKs and apply permissions"""
     apks = list(APK_DIR.glob("*.apk"))
 
     if not apks:
@@ -193,13 +228,6 @@ def main():
     print(f"{C.BOLD}----------------------------------------{C.RESET}")
     print(f"{C.BOLD}Starting installation of {total} APK(s)...{C.RESET}")
     print(f"{C.BOLD}----------------------------------------{C.RESET}")
-
-    def draw_progress(current, total, bar_length=40):
-        percent = current / total
-        filled = int(bar_length * percent)
-        bar = "█" * filled + "-" * (bar_length - filled)
-        sys.stdout.write(f"\r{C.BOLD}Progress:{C.RESET} |{C.GREEN}{bar}{C.RESET}| {current}/{total} ({int(percent*100)}%)")
-        sys.stdout.flush()
 
     for apk_path in apks:
         if processed > 0:
@@ -217,8 +245,8 @@ def main():
         )
 
         if not config:
-            log_warn(f"No permissions config found. Skipping {apk_name}")
-            skipped.append(apk)
+            log_warn(f"No permissions config found. Skipping...")
+            skipped.append(f"{C.BOLD}{apk_name}{C.RESET}")
             draw_progress(processed, total)
             continue
 
@@ -228,42 +256,125 @@ def main():
         success = install_apk(apk_path, flags)
         if not success:
             log_error("Installation failed")
-            skipped.append(apk)
+            skipped.append(f"{C.BOLD}{logical_name}{C.RESET} ({apk_name})")
             draw_progress(processed, total)
             continue
 
-        #log_success("Installed successfully")
-
-        apply_appops(package, config.get("appops", []))
-        apply_pm_grants(package, config.get("pm_grants", []))
-
-        if config.get("deviceidle_whitelist", False):
-            log_step("Adding to deviceidle whitelist")
-            add_deviceidle_whitelist(package)
-
-        acc = config.get("accessibility_services", [])
-        if acc:
-            log_step("Adding accessibility service")
-            enable_accessibility_services(acc)
-
+        apply_permissions_to_package(package, config)
         draw_progress(processed, total)
 
     print()  # move to next line after progress bar
 
-    # ==============================
-    # Summary
-    # ==============================
+    print()
     print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print(f"{C.BOLD}Summary{C.RESET}")
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print()
 
     if skipped:
         log_warn("Skipped APKs:")
-        for apk in skipped:
-            print(f"  - {apk}")
+        for apk_name in skipped:
+            print(f"  - {apk_name}")
     else:
         log_success("All APKs processed successfully")
 
     print()
     print(f"{C.BOLD}{C.GREEN}Done ✔{C.RESET}")
+
+
+def mode_apply_permissions(permissions_map):
+    total = len(permissions_map)
+    processed = 0
+    skipped = []
+
+    print()
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print(f"{C.BOLD}Applying permissions to {total} package(s)...{C.RESET}")
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+
+    for logical_name, config in permissions_map.items():
+        if processed > 0:
+            print()
+
+        processed += 1
+        package = config.get("package")
+
+        print()
+
+        if not package:
+            log_apk(f"{C.BOLD}{logical_name}{C.RESET}")
+            log_warn(f"No package defined for {logical_name}. Skipping...")
+            skipped.append(logical_name)
+            draw_progress(processed, total)
+            continue
+
+        log_apk(f"{C.BOLD}{logical_name}{C.RESET} ({package})")
+
+        # Check if there are any permissions to apply
+        has_permissions = (
+            config.get("appops", []) or
+            config.get("pm_grants", []) or
+            config.get("deviceidle_whitelist", False) or
+            config.get("accessibility_services", [])
+        )
+
+        if not has_permissions:
+            log_warn(f"No permissions defined. Skipping...")
+            skipped.append(f"{C.BOLD}{logical_name}{C.RESET} ({package})")
+            draw_progress(processed, total)
+            continue
+
+        try:
+            apply_permissions_to_package(package, config)
+            draw_progress(processed, total)
+        except Exception as e:
+            log_error(f"Failed to apply permissions: {e}")
+            skipped.append(f"{C.BOLD}{logical_name}{C.RESET} ({package})")
+            draw_progress(processed, total)
+
+    print()  # move to next line after progress bar
+
+    print()
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print(f"{C.BOLD}Summary{C.RESET}")
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print()
+
+    if skipped:
+        log_warn("Skipped packages:")
+        for package in skipped:
+            print(f"  - {package}")
+    else:
+        log_success("Permissions applied to all packages successfully")
+
+    print()
+    print(f"{C.BOLD}{C.GREEN}Done ✔{C.RESET}")
+
+# ==============================
+# Main
+# ==============================
+def main():
+    if not APK_DIR.exists():
+        log_error("apk folder not found. Create ./apk and put APK files there.")
+        return
+
+    if not PERMISSIONS_FILE.exists():
+        log_error("permissions.json not found.")
+        return
+
+    check_adb()
+    select_device()
+
+    # Select operation mode
+    mode = select_mode()
+
+    with open(PERMISSIONS_FILE, "r", encoding="utf-8") as f:
+        permissions_map = json.load(f)
+
+    if mode == "install":
+        mode_install(permissions_map)
+    elif mode == "apply_permissions":
+        mode_apply_permissions(permissions_map)
 
 if __name__ == "__main__":
     main()
