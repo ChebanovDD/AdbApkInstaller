@@ -2,7 +2,7 @@
 
 APK deployment automation tool.
 
-<p align="right">
+<p>
   <a href="README.md">🇺🇸 English</a> |
   <a href="README.ru.md">🇷🇺 Русский</a>
 </p>
@@ -83,6 +83,14 @@ Shows list of APKs without config at end.
 
 ```json
 {
+  "GMClock": {
+    "package": "com.chebanovdd.gmclock",
+    "install_flags": "-r -g -d",
+    "appops": [],
+    "pm_grants": [],
+    "deviceidle_whitelist": false,
+    "accessibility_services": []
+  },
   "GMFloatingMenu": {
     "package": "com.chebanovdd.gmfloatingmenu",
     "install_flags": "-r -g -d",
@@ -184,11 +192,13 @@ XXXXXXXX device
 
 ## :rocket: How To Use
 
+Windows:
+
 ```shell
 python install_apks.py
 ```
 
-OR Mac:
+Mac:
 
 ```shell
 python3 install_apks.py
