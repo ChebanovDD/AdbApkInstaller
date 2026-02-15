@@ -13,7 +13,7 @@ APK deployment automation tool.
 - [Folder Structure](#cactus-folder-structure)
 - [Permissions JSON Format](#jigsaw-permissions-json-format)
 - [Installation Guide](#gear-installation-guide)
-- [How To Use](#rocket-how-to-use)
+- [How To Run](#rocket-how-to-run)
 
 ## :pencil: Overview
 
@@ -190,7 +190,7 @@ List of devices attached
 XXXXXXXX device
 ```
 
-## :rocket: How To Use
+## :rocket: How To Run
 
 Windows:
 
