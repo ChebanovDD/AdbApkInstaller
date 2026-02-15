@@ -1,8 +1,44 @@
 import json
 import subprocess
 import pathlib
+import sys
 import re
 
+# ==============================
+# Console Colors
+# ==============================
+class C:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    MAGENTA = "\x1b[35m"
+
+
+def log_step(msg):
+    print(f"{C.CYAN}[STEP]{C.RESET} {msg}")
+
+def log_apk(msg):
+    print(f"{C.MAGENTA}[APK]{C.RESET} {msg}")
+
+def log_command(msg):
+    print(f"{C.BLUE}[COMMAND]{C.RESET} {msg}")
+
+def log_warn(msg):
+    print(f"{C.YELLOW}[WARN]{C.RESET} {msg}")
+
+def log_error(msg):
+    print(f"{C.RED}[ERROR]{C.RESET} {msg}")
+
+def log_success(msg):
+    print(f"{C.GREEN}[OK]{C.RESET} {msg}")
+
+# ==============================
+# Paths
+# ==============================
 SCRIPT_DIR = pathlib.Path(__file__).parent
 APK_DIR = SCRIPT_DIR / "apk"
 PERMISSIONS_FILE = SCRIPT_DIR / "permissions.json"
@@ -29,19 +65,16 @@ def find_permissions_for_apk(apk_name, permissions_map):
 
 def run(cmd: str, capture=False):
     full_cmd = f"adb {ADB_DEVICE_ARG} {cmd}"
-    print(f"\n>>> {full_cmd}")
+    #log_command(f"{full_cmd}")
 
     if capture:
         return subprocess.check_output(full_cmd, shell=True).decode().strip()
 
     result = subprocess.run(full_cmd, shell=True)
-    if result.returncode != 0:
-        raise RuntimeError(full_cmd)
+    return result.returncode == 0
 
 
 def run_raw(cmd: str, capture=False):
-    print(f"\n>>> {cmd}")
-
     if capture:
         return subprocess.check_output(cmd, shell=True).decode().strip()
 
@@ -62,29 +95,35 @@ def select_device():
 
     devices = [l.split()[0] for l in lines if "device" in l]
 
+    if not lines:
+        log_error("No connected devices found.")
+        sys.exit(1)
+
     if len(devices) == 1:
         ADB_DEVICE_ARG = f"-s {devices[0]}"
         return
 
-    print("Multiple devices:")
+    print(f"{C.BOLD}Multiple devices detected:{C.RESET}")
     for i, d in enumerate(devices):
         print(f"[{i}] {d}")
 
-    idx = int(input("Select device: "))
+    idx = int(input("Select device number: "))
     ADB_DEVICE_ARG = f"-s {devices[idx]}"
 
 
 def install_apk(apk_path, flags):
-    run(f'install {flags} "{apk_path}"')
-
+    success = run(f'install {flags} "{apk_path}"')
+    return success
 
 def apply_appops(package, ops):
     for op in ops:
+        log_step(f"Executing: {op}")
         run(f"shell appops set --user current {package} {op}")
 
 
 def apply_pm_grants(package, grants):
     for perm in grants:
+        log_step(f"Executing: {perm}")
         run(f"shell pm grant --user current {package} {perm}")
 
 
@@ -122,30 +161,55 @@ def enable_accessibility_services(new_services):
     run("shell settings put secure accessibility_enabled 1")
 
 
+# ==============================
+# Main
+# ==============================
 def main():
+    if not APK_DIR.exists():
+        log_error("apk folder not found. Create ./apk and put APK files there.")
+        return
+
+    if not PERMISSIONS_FILE.exists():
+        log_error("permissions.json not found.")
+        return
+
     check_adb()
     select_device()
-
-    if not APK_DIR.exists():
-        print("apk folder not found. Create ./apk and put APK files there.")
-        return
 
     with open(PERMISSIONS_FILE, "r", encoding="utf-8") as f:
         permissions_map = json.load(f)
 
     apks = list(APK_DIR.glob("*.apk"))
-    skipped = []
+
+    if not apks:
+        log_warn("No APK files found in apk/ folder.")
+        return
 
     total = len(apks)
+    skipped = []
     processed = 0
 
-    print(f"Found {total} APKs in apk/ folder")
+    print()
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+    print(f"{C.BOLD}Starting installation of {total} APK(s)...{C.RESET}")
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+
+    def draw_progress(current, total, bar_length=40):
+        percent = current / total
+        filled = int(bar_length * percent)
+        bar = "█" * filled + "-" * (bar_length - filled)
+        sys.stdout.write(f"\r{C.BOLD}Progress:{C.RESET} |{C.GREEN}{bar}{C.RESET}| {current}/{total} ({int(percent*100)}%)")
+        sys.stdout.flush()
 
     for apk_path in apks:
+        if processed > 0:
+            print()  # move to next line before processing next APK
+
         processed += 1
         apk_name = apk_path.name
 
-        print(f"\n[{processed} / {total}] Installing {apk_name}")
+        print()
+        log_apk(f"{C.BOLD}{apk_name}{C.RESET}")
 
         logical_name, config = find_permissions_for_apk(
             apk_name,
@@ -153,29 +217,53 @@ def main():
         )
 
         if not config:
-            skipped.append(apk_name)
-            print("No config found → skipped")
+            log_warn(f"No permissions config found. Skipping {apk_name}")
+            skipped.append(apk)
+            draw_progress(processed, total)
             continue
 
         flags = config.get("install_flags", "-r -g")
         package = config["package"]
 
-        install_apk(apk_path, flags)
+        success = install_apk(apk_path, flags)
+        if not success:
+            log_error("Installation failed")
+            skipped.append(apk)
+            draw_progress(processed, total)
+            continue
+
+        #log_success("Installed successfully")
+
         apply_appops(package, config.get("appops", []))
         apply_pm_grants(package, config.get("pm_grants", []))
 
         if config.get("deviceidle_whitelist", False):
+            log_step("Adding to deviceidle whitelist")
             add_deviceidle_whitelist(package)
 
         acc = config.get("accessibility_services", [])
         if acc:
+            log_step("Adding accessibility service")
             enable_accessibility_services(acc)
 
-    if skipped:
-        print("\nSkipped APKs:")
-        for s in skipped:
-            print(" -", s)
+        draw_progress(processed, total)
 
+    print()  # move to next line after progress bar
+
+    # ==============================
+    # Summary
+    # ==============================
+    print(f"{C.BOLD}----------------------------------------{C.RESET}")
+
+    if skipped:
+        log_warn("Skipped APKs:")
+        for apk in skipped:
+            print(f"  - {apk}")
+    else:
+        log_success("All APKs processed successfully")
+
+    print()
+    print(f"{C.BOLD}{C.GREEN}Done ✔{C.RESET}")
 
 if __name__ == "__main__":
     main()
