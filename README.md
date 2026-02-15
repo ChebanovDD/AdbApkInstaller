@@ -1,8 +1,21 @@
 # AdbApkInstaller
 
----
+APK deployment automation tool.
 
-## 🚀 Overview
+<p align="right">
+  <a href="README.md">🇺🇸 English</a> |
+  <a href="README.ru.md">🇷🇺 Русский</a>
+</p>
+
+## :open_book: Table of Contents
+
+- [Overview](#pencil-overview)
+- [Folder Structure](#cactus-folder-structure)
+- [Permissions JSON Format](#jigsaw-permissions-json-format)
+- [Installation Guide](#gear-installation-guide)
+- [How To Use](#rocket-how-to-use)
+
+## :pencil: Overview
 
 This tool automates:
 
@@ -13,25 +26,21 @@ This tool automates:
 - Adding Accessibility services (without overwriting existing ones)
 - Selecting target device if multiple devices are connected
 - Fuzzy matching APK filenames to permission configs
-- Skipping unknown APKs and reporting them
-- Showing install progress (how many APKs left)
 
----
+### APK Installation
 
-## ✨ Features
-
-### 📦 APK Installation
 - Installs all APK files located inside **apk/** folder next to the script
 - Supports install flags per app
 
-### 🔐 Permissions Automation
+### Permissions Automation
+
 Supports:
 - pm grant
 - appops set
-- accessibility services merge-safe enable
 - deviceidle whitelist
+- accessibility services merge-safe enable
 
-### 🧠 Smart Config Matching
+### Smart Config Matching
 Matches logical app names like:
 
 ```
@@ -46,38 +55,33 @@ gm_floating_menu_v1.2.0.apk
 gmfloatingmenu.apk
 ```
 
-### 📱 Multi-Device Support
+Normalization app names logic removes:
+
+- underscores
+- dashes
+- dots
+- spaces
+- version numbers
+
+### Multi-Device Support
 If multiple devices connected → user selects target device.
 
-### 📊 Progress Display
-Shows:
-
-```
-[2 / 5] Installing gm_floating_menu.apk
-```
-
-### ⚠️ Skip Reporting
+### Skip Reporting
 Shows list of APKs without config at end.
 
----
+## :cactus: Folder Structure
 
-## 📂 Folder Structure
+    AdbApkInstaller/
+    ├── install_apks.py
+    ├── permissions.json
+    ├── apk/
+    │   ├── app1.apk
+    │   ├── app2.apk
+    │   └── app3.apk
 
-```
-deploy_apk/
- ├ install_apks.py
- ├ permissions.json
- ├ apk/
- │   ├ app1.apk
- │   ├ app2.apk
- │   └ app3.apk
-```
+## :jigsaw: Permissions JSON Format
 
----
-
-# 🧩 permissions.json Format
-
-```
+```json
 {
   "GMFloatingMenu": {
     "package": "com.chebanovdd.gmfloatingmenu",
@@ -96,187 +100,96 @@ deploy_apk/
 }
 ```
 
----
+## :gear: Installation Guide
 
-# 🧑‍💻 Installation Guide
+### :white_check_mark: STEP 1 — Check Python Installation
 
----
-
-# ✅ STEP 1 — Check Python Installation
-
-## Windows
+#### Windows
 
 Open PowerShell:
 
-```
+```shell
 python --version
 ```
 
 OR
 
-```
+```shell
 py --version
 ```
 
-If installed → shows version.
+Shows version if installed. Else download latest [Python](https://www.python.org/downloads/).
 
----
+> **Note:** Make sure Python is added to PATH.
 
-## Install Python (Windows)
-
-1. Go to:
-
-```
-https://www.python.org/downloads/
-```
-
-2. Download latest Python
-3. IMPORTANT:
-
-✔ Check **Add Python to PATH**
-
-4. Click Install
-
----
-
-## Mac
+#### Mac
 
 Open Terminal:
 
-```
+```shell
 python3 --version
 ```
 
 If not installed:
 
-```
+```shell
 brew install python
 ```
 
 If Homebrew missing:
 
-```
+```shell
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
----
+### :white_check_mark: STEP 2 — Check ADB Installation
 
-# ✅ STEP 2 — Check ADB Installation
+#### Windows
 
-## Windows
-
-```
+```shell
 adb version
 ```
 
 If missing:
 
-### Install Android Platform Tools
+1. Download [Android Platform Tools](https://developer.android.com/studio/releases/platform-tools)
+2. Extract to `C:\\platform-tools`
+3. Add to PATH `System → Environment Variables → PATH`
+4. Restart terminal
 
-1. Download:
+#### Mac
 
-```
-https://developer.android.com/studio/releases/platform-tools
-```
-
-2. Extract to:
-
-```
-C:\\platform-tools
-```
-
-3. Add to PATH
-
-System → Environment Variables → PATH → Add:
-
-```
-C:\\platform-tools
-```
-
-Restart terminal.
-
----
-
-## Mac
-
-```
-brew install android-platform-tools
-```
-
-Check:
-
-```
+```shell
 adb version
 ```
 
----
+If missing:
 
-# ✅ STEP 3 — Check Device Connection
-
+```shell
+brew install android-platform-tools
 ```
+
+### :white_check_mark: STEP 3 — Check Device Connection
+
+```shell
 adb devices
 ```
 
 Should show:
 
-```
+```shell
 List of devices attached
 XXXXXXXX device
 ```
 
----
+## :rocket: How To Use
 
-# ▶ Running The Tool
-
-```
+```shell
 python install_apks.py
 ```
 
 OR Mac:
 
-```
+```shell
 python3 install_apks.py
 ```
-
----
-
-# 📊 Progress Example
-
-```
-Found 4 APKs
-
-[1 / 4] Installing gm_floating_menu.apk
-[2 / 4] Installing hud.apk
-[3 / 4] Installing overlay.apk
-[4 / 4] Installing debugtool.apk
-```
-
----
-
-# 🧠 Matching Logic
-
-Normalization removes:
-
-- underscores
-- dashes
-- dots
-- spaces
-- version numbers
-
----
-
-# ⚠️ Skip Example
-
-```
-Skipped APKs:
- - test_build.apk
- - unknown_tool.apk
-```
-
----
-
-# 🎯 Done
-
-You now have a production-grade APK deployment automation tool that loads APKs from a dedicated folder.
-
----
