@@ -51,7 +51,7 @@ PERMISSIONS_FILE = SCRIPT_DIR / "permissions.json"
 ADB_DEVICE_ARG = ""
 
 # small delay after installation before applying permissions (seconds)
-INSTALL_DELAY = 1
+INSTALL_DELAY = 1.5
 
 
 def normalize_name(name: str):
