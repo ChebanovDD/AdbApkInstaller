@@ -18,5 +18,17 @@
     ],
     "deviceidle_whitelist": false,
     "accessibility_services": []
+  },
+  "GMAppRunner": {
+    "package": "com.chebanovdd.gmapprunner",
+    "install_flags": "-r -g -d",
+    "appops": [
+      "SYSTEM_ALERT_WINDOW allow"
+    ],
+    "pm_grants": [],
+    "deviceidle_whitelist": false,
+    "accessibility_services": [
+      "com.chebanovdd.gmapprunner/.HomeAccessibilityService"
+    ]
   }
 }
