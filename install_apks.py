@@ -3,6 +3,7 @@ import subprocess
 import pathlib
 import sys
 import re
+import time
 
 # ==============================
 # Console Colors
@@ -48,6 +49,9 @@ SCRIPT_DIR = pathlib.Path(__file__).parent
 APK_DIR = SCRIPT_DIR / "apk"
 PERMISSIONS_FILE = SCRIPT_DIR / "permissions.json"
 ADB_DEVICE_ARG = ""
+
+# small delay after installation before applying permissions (seconds)
+INSTALL_DELAY = 1
 
 
 def normalize_name(name: str):
@@ -143,7 +147,9 @@ def get_enabled_accessibility():
             "shell settings get secure enabled_accessibility_services",
             capture=True
         )
-        if current == "null":
+        current = current.strip()
+
+        if not current or current == "null":
             return []
         return current.split(":")
     except:
@@ -259,6 +265,10 @@ def mode_install(permissions_map):
             skipped.append(f"{C.BOLD}{logical_name}{C.RESET} ({apk_name})")
             draw_progress(processed, total)
             continue
+
+        # give the system a moment to settle before applying permissions
+        log_step(f"Waiting {INSTALL_DELAY}s before applying permissions")
+        time.sleep(INSTALL_DELAY)
 
         apply_permissions_to_package(package, config)
         draw_progress(processed, total)
