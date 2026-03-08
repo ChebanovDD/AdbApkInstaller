@@ -30,5 +30,54 @@
     "accessibility_services": [
       "com.chebanovdd.gmapprunner/.HomeAccessibilityService"
     ]
+  },
+  "RuStore": {
+    "package": "ru.vk.store",
+    "install_flags": "-r -g -d",
+    "appops": [
+      "REQUEST_INSTALL_PACKAGES allow"
+    ],
+    "pm_grants": [],
+    "deviceidle_whitelist": false,
+    "accessibility_services": []
+  },
+  "Gboard": {
+    "package": "com.google.android.inputmethod.latin",
+    "install_flags": "-r -g -d",
+    "appops": [],
+    "pm_grants": [],
+    "deviceidle_whitelist": false,
+    "accessibility_services": []
+  },
+  "FileManagerPlus": {
+    "package": "com.alphainventor.filemanager",
+    "install_flags": "-r -g -d",
+    "appops": [
+      "MANAGE_EXTERNAL_STORAGE allow",
+      "REQUEST_INSTALL_PACKAGES allow"
+    ],
+    "pm_grants": [],
+    "deviceidle_whitelist": false,
+    "accessibility_services": []
+  },
+  "HUDSpeed": {
+    "package": "air.StrelkaHUDFREE",
+    "install_flags": "-r -g -d",
+    "appops": [
+      "SYSTEM_ALERT_WINDOW allow"
+    ],
+    "pm_grants": [],
+    "deviceidle_whitelist": true,
+    "accessibility_services": []
+  },
+  "MXPlayer": {
+    "package": "com.mxtech.videoplayer.ad",
+    "install_flags": "-r -g -d",
+    "appops": [
+      "MANAGE_EXTERNAL_STORAGE allow"
+    ],
+    "pm_grants": [],
+    "deviceidle_whitelist": false,
+    "accessibility_services": []
   }
 }
