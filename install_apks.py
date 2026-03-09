@@ -141,6 +141,12 @@ def add_deviceidle_whitelist(package):
     run(f"shell dumpsys deviceidle whitelist +{package}")
 
 
+def allow_notification_listeners(package, listeners):
+    for listener in listeners:
+        log_step(f"Allowing notification listener: {listener}")
+        run(f"shell cmd notification allow_listener {listener}")
+
+
 def get_enabled_accessibility():
     try:
         current = run(
@@ -216,6 +222,10 @@ def apply_permissions_to_package(package, config):
     if acc:
         log_step("Adding accessibility service")
         enable_accessibility_services(acc)
+    
+    listeners = config.get("notification_listeners", [])
+    if listeners:
+        allow_notification_listeners(package, listeners)
 
 
 def mode_install(permissions_map):
@@ -325,7 +335,8 @@ def mode_apply_permissions(permissions_map):
             config.get("appops", []) or
             config.get("pm_grants", []) or
             config.get("deviceidle_whitelist", False) or
-            config.get("accessibility_services", [])
+            config.get("accessibility_services", []) or
+            config.get("notification_listeners", [])
         )
 
         if not has_permissions:
