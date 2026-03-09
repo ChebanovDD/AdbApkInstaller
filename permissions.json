@@ -16,7 +16,7 @@
     "pm_grants": [
       "android.permission.WRITE_SECURE_SETTINGS"
     ],
-    "deviceidle_whitelist": false,
+    "deviceidle_whitelist": true,
     "accessibility_services": []
   },
   "GMAppRunner": {
